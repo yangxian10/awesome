@@ -1,6 +1,6 @@
 __author__ = 'yangxian'
 
-import logging, threading, functools, time
+import logging, threading, functools, time, uuid
 
 class Dict(dict):
     def __init__(self, names=(), values=(), **kw):
@@ -138,6 +138,11 @@ class _TransactionCtx(object):
 engine = None
 _db_ctx = _DbCtx()
 
+def next_id(t=None):
+    if t is None:
+        t = time.time()
+    return '%15d%s000' % (int(t*1000), uuid.uuid4().hex)
+
 def _profiling(start, sql=''):
     t = time.time() - start
     if t > 0.1:
@@ -244,7 +249,7 @@ def update(sql, *args):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    create_engine('www-data', 'www-data', 'test')
+    create_engine('root', '123456', 'test')
     update('drop table if exists user')
     update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
     import  doctest
