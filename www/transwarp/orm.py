@@ -92,6 +92,21 @@ class VersionField(Field):
 
 _triggers = frozenset(['pre_insert', 'pre_update', 'pre_delete'])
 
+def _gen_sql(table_name, mappings):
+    pk = None
+    sql = ['-- generating SQL for %s:' % table_name, 'create table `%s` (' % table_name]
+    for f in sorted(mappings.values(), lambda x, y: cmp(x._order, y._order)):
+        if not hasattr(f, 'ddl'):
+            raise StandardError('no ddl in field "%s".' % n)
+        ddl = f.ddl
+        nullable = f.nullable
+        if f.primary_key:
+            pk = f.name
+        sql.append(nullable and '  `%s` %s,' % (f.name, ddl) or '  `%s` %s not null,' % (f.name, ddl))
+    sql.append('  primary key(`%s`)' % pk)
+    sql.append(');')
+    return '\n'.join(sql)
+
 class ModelMetaclass(type):
 
     def __new__(cls, name, bases, attrs):
@@ -223,8 +238,9 @@ class Model(dict):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    db.create_engine('root', '123456', 'test')
+    db.create_engine('www-data', 'www-data', 'test')
     db.update('drop table if exists user')
     db.update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
+    print 'test ok!'
     import doctest
     doctest.testmod()

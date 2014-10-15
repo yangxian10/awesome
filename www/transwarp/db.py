@@ -17,6 +17,24 @@ class Dict(dict):
     def __setattr__(self, key, value):
         self[key] = value
 
+def next_id(t=None):
+    '''
+    Return next id as 50-char string.
+
+    Args:
+        t: unix timestamp, default to None and using time.time().
+    '''
+    if t is None:
+        t = time.time()
+    return '%015d%s000' % (int(t * 1000), uuid.uuid4().hex)
+
+def _profiling(start, sql=''):
+    t = time.time() - start
+    if t > 0.1:
+        logging.warning('[PROFILING] [DB] %s: %s' % (t, sql))
+    else:
+        logging.info('[PROFILING] [DB] %s: %s' % (t, sql))
+
 class DBError(Exception):
     pass
 
@@ -138,11 +156,6 @@ class _TransactionCtx(object):
 engine = None
 _db_ctx = _DbCtx()
 
-def next_id(t=None):
-    if t is None:
-        t = time.time()
-    return '%15d%s000' % (int(t*1000), uuid.uuid4().hex)
-
 def _profiling(start, sql=''):
     t = time.time() - start
     if t > 0.1:
@@ -193,9 +206,9 @@ def _select(sql, first, *args):
     logging.info('SQL: %s, ARGS: %s' % (sql, args))
     try:
         cursor = _db_ctx.cursor()
-        cursor.execute(sql, *args)
+        cursor.execute(sql, args)
         if cursor.description:
-            name = [x[0] for x in cursor.description]
+            names = [x[0] for x in cursor.description]
         if first:
             values = cursor.fetchone()
             if not values:
@@ -208,7 +221,7 @@ def _select(sql, first, *args):
 
 @with_connection
 def select_one(sql, *args):
-    return _select(sql, Ture, *args)
+    return _select(sql, True, *args)
 
 @with_connection
 def select_int(sql, *args):
@@ -249,8 +262,9 @@ def update(sql, *args):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
-    create_engine('root', '123456', 'test')
+    create_engine('www-data', 'www-data', 'test')
     update('drop table if exists user')
     update('create table user (id int primary key, name text, email text, passwd text, last_modified real)')
-    import  doctest
+    print 'test ok!'
+    import doctest
     doctest.testmod()
