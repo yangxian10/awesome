@@ -237,6 +237,11 @@ def _to_str(s):
 def _to_unicode(s, encoding='utf-8'):
     return s.decode('utf-8')
 
+def _quote(s, encoding='utf-8'):
+    if isinstance(s, unicode):
+        s = s.encode(encoding)
+    return urllib.quote(s)
+
 def _unquote(s, encoding='utf-8'):
     return urllib.unquote(s).decode(encoding)
 

@@ -2,8 +2,10 @@ __author__ = 'yang xian'
 
 import logging, os, re, time, base64, hashlib
 
+import markdown2
+
 from transwarp.web import get, view, post, ctx, interceptor, seeother, notfound
-from apis import api, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
+from apis import api, Page, APIError, APIValueError, APIPermissionError, APIResourceNotFoundError
 from models import User, Blog, Comment
 from config import configs
 
@@ -76,9 +78,9 @@ def _get_blogs_by_page():
 @view('blogs.html')
 @get('/')
 def index():
-    blogs = Blog.find_all()
+    blogs, page = _get_blogs_by_page()
     #user = User.find_first('where email=?', 'admin@example.com')
-    return dict(blogs=blogs, user=ctx.request.user)
+    return dict(page=page, blogs=blogs, user=ctx.request.user)
 
 @view('blog.html')
 @get('/blog/:blog_id')
@@ -193,6 +195,14 @@ def api_get_blogs():
     return dict(blogs=blogs, page=page)
 
 @api
+@get('/api/blogs/:blog_id')
+def api_get_blog(blog_id):
+    blog = Blog.get(blog_id)
+    if blog:
+        return blog
+    raise APIResourceNotFoundError('Blog')
+
+@api
 @post('/api/blogs')
 def api_create_blog():
     check_admin()
@@ -281,7 +291,9 @@ def api_get_comments():
 @api
 @get('/api/users')
 def api_get_users():
-    users = User.find_by('order by created_at desc')
+    total = User.count_all()
+    page = Page(total, _get_page_index())
+    users = User.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
     for u in users:
         u.password = '******'
-    return dict(users=users)
+    return dict(users=users, page=page)
