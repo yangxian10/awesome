@@ -10,6 +10,14 @@ from config import configs
 _COOKIE_NAME = 'awesession'
 _COOKIE_KEY = configs.session.secret
 
+def _get_page_index():
+    page_index = 1
+    try:
+        page_index = int(ctx.request.get('page', '1'))
+    except ValueError:
+        pass
+    return page_index
+
 def make_signed_cookie(id, password, max_age):
     # build cookie string by: id-expires-md5
     expires = str(int(time.time() + (max_age or 86400)))
@@ -58,6 +66,12 @@ def manage_interceptor(next):
     if user and user.admin:
         return next()
     raise seeother('/signin')
+
+def _get_blogs_by_page():
+    total = Blog.count_all()
+    page = Page(total, _get_page_index())
+    blogs = Blog.find_by('order by created_at desc limit ?,?', page.offset, page.limit)
+    return blogs, page
 
 @view('blogs.html')
 @get('/')
@@ -130,6 +144,16 @@ def register():
 @get('/manage/blogs/create')
 def manage_blogs_create():
     return dict(id=None, action='/api/blogs', redirect='/manage/blogs', user=ctx.request.user)
+
+@api
+@get('/api/blogs')
+def api_get_blogs():
+    format = ctx.request.get('format', '')
+    blogs, page = _get_blogs_by_page()
+    if format=='html':
+        for blog in blogs:
+            blog.content = markdown2.markdown(blog.content)
+    return dict(blogs=blogs, page=page)
 
 @api
 @post('/api/blogs')
